@@ -1,0 +1,8 @@
+dependencies:
+  flutter:
+    sdk: flutter
+  sqflite: ^2.3.0
+  path: ^1.8.3
+  pointycastle: ^3.7.0
+  nearby_connections: ^4.0.1
+  shared_preferences: ^2.2.2
