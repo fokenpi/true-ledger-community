@@ -61,3 +61,25 @@ class LocalJournal {
     return receivedTotal - sentTotal;
   }
 }
+// Add to LocalJournal class
+
+Future<List<Transaction>> getPendingTransactions() async {
+  final db = await this.db;
+  final List<Map<String, dynamic>> maps = await db.query(
+    'journal',
+    where: 'status = ?',
+    whereArgs: ['pending'],
+    orderBy: 'timestamp ASC',
+  );
+  return List.generate(maps.length, (i) => Transaction.fromJson(maps[i]));
+}
+
+Future<void> markAsSynced(String id) async {
+  final db = await this.db;
+  await db.update(
+    'journal',
+    {'status': 'synced'},
+    where: 'id = ?',
+    whereArgs: [id],
+  );
+}

@@ -77,3 +77,19 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 }
+@override
+void initState() {
+  super.initState();
+  _loadBalance();
+  _startSyncWatcher();
+}
+
+void _startSyncWatcher() {
+  // Check every 30 seconds
+  Timer.periodic(const Duration(seconds: 30), (timer) async {
+    if (await SyncService().isBranchAvailable()) {
+      await SyncService().sync();
+      _loadBalance(); // refresh balance
+    }
+  });
+}

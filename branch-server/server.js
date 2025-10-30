@@ -15,7 +15,7 @@ const uploader = new GCSUploader(`true-ledger-archive-${process.env.GCLOUD_PROJE
 // Batch processing
 let pendingBatch = [];
 const BATCH_SIZE = 10;
-const BATCH_TIMEOUT = 60000; // 1 minute
+const BATCH_TIMEOUT = 60000;
 let batchTimer;
 
 function resetBatchTimer() {
@@ -25,7 +25,6 @@ function resetBatchTimer() {
 
 async function processBatch() {
   if (pendingBatch.length === 0) return;
-
   const batch = [...pendingBatch];
   pendingBatch = [];
 
@@ -34,12 +33,17 @@ async function processBatch() {
     await journal.markAsUploaded(uploadedIds);
   } catch (error) {
     console.error('Batch upload failed:', error);
-    pendingBatch.push(...batch); // retry
+    pendingBatch.push(...batch);
     resetBatchTimer();
   }
 }
 
-// Sync endpoint
+// 🔹 NEW: Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', server: 'True Ledger Branch' });
+});
+
+// 🔹 Sync endpoint (as before)
 app.post('/sync', async (req, res) => {
   const { deviceId, transactions } = req.body;
 
@@ -52,13 +56,10 @@ app.post('/sync', async (req, res) => {
     const { payload, signature, sender_pubkey } = tx;
     if (!payload || !signature || !sender_pubkey) continue;
 
-    // Verify signature
     if (!verifySignature(payload, signature, sender_pubkey)) {
-      console.warn('Invalid signature from', sender_pubkey);
       continue;
     }
 
-    // Save to local journal
     const id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     await journal.saveTransaction({
       id,
@@ -75,11 +76,9 @@ app.post('/sync', async (req, res) => {
       sender_pubkey,
       timestamp: new Date().toISOString()
     });
-
     accepted.push(id);
   }
 
-  // Trigger batch processing
   if (pendingBatch.length >= BATCH_SIZE) {
     clearTimeout(batchTimer);
     processBatch();
@@ -93,8 +92,4 @@ app.post('/sync', async (req, res) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`SetBranch server running on http://0.0.0.0:${PORT}`);
-});
-// Add this to server.js
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', server: 'True Ledger Branch' });
 });
